@@ -189,7 +189,7 @@ namespace Starlifter
         /// </summary>
         private void ProcessRotation()
         {
-            Debug.Log($"Rotation input: {_rotationInput}");
+            //Debug.Log($"Rotation input: {_rotationInput}");
             if (_rotationInput < 0)
             {
                 ApplyRotation(_rotationStrength);
@@ -206,7 +206,9 @@ namespace Starlifter
         /// <param name="rotationThisFrame">Signed rotation amount to apply this frame.</param>
         private void ApplyRotation(float rotationThisFrame)
         {
+            _rb.freezeRotation = true;
             transform.Rotate(Vector3.forward * (rotationThisFrame * Time.fixedDeltaTime));
+            _rb.freezeRotation = false;
         }
     }
 }

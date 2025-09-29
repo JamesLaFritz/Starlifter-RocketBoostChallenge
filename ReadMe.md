@@ -36,7 +36,7 @@ Each milestone corresponds to a key section in the Rocket Boost module. You can 
 | Completed | Milestone                   | Description                                                                            |
 | --------- | --------------------------- | -------------------------------------------------------------------------------------- |
 |   [ x ]   | 1. Setup & Assets           | Import GameDev.tv assets, basic scene with spaceship & landing pad.                    |
-|    [ ]    | 2. Player Controls          | Rotation input, AddRelativeForce thrust, Cinemachine follow camera, Rigidbody tuning.  |
+|   [ x ]   | 2. Player Controls          | Rotation input, AddRelativeForce thrust, Cinemachine follow camera, Rigidbody tuning.  |
 |    [ ]    | 3. Audio & Particles        | Thruster SFX, booster particle effects, multiple audio clips.                          |
 |    [ ]    | 4. Game State Management    | Switch statements for state, SceneManager respawn/level load, debug keys.              |
 |    [ ]    | 5. Level Design & Obstacles | Add colliders/hazards, oscillating objects, multi-level layouts.                       |
