@@ -1,15 +1,13 @@
 #region Header
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // File:        Movement.cs
 // Author:      James LaFritz
 // Created:     2025-09-29
-// Description: Reads thrust input via Unity's Input System and (for now) logs
-//              when the player is thrusting. Intended to drive physics-based
-//              thrust forces in a Rigidbody controller.
-//
+// Description: Reads thrust input via Unity's Input System and applies a
+//              placeholder response that will evolve into full thrust physics.
 // Project:     Starlifter: Rocket Boost Challenge
 // Notes:       GDD and code documentation written with assistance from ChatGPT.
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 #endregion
 
 using UnityEngine;
@@ -18,71 +16,108 @@ using UnityEngine.InputSystem;
 namespace Starlifter
 {
     /// <summary>
-    /// Handles player thrust input for the rocket.
+    /// Unity behaviour that manages thrust input for the player rocket.
     /// </summary>
     /// <remarks>
-    /// This component expects an <see cref="InputAction"/> mapped to a
-    /// "thrust" style control (e.g., <c>Space</c> on keyboard or a gamepad
-    /// face button). It enables/disables the action automatically and can be
-    /// expanded to apply forces to a <see cref="Rigidbody"/> in <c>FixedUpdate</c>.
+    /// Requires a Rigidbody on the same GameObject and an <see cref="InputAction"/>
+    /// bound to a thrust control. The action is toggled with the component and
+    /// drives both placeholder logging and force application.
     /// </remarks>
+    [RequireComponent(typeof(Rigidbody))]
     public class Movement : MonoBehaviour
     {
         /// <summary>
-        /// Input action used to read the player's thrust command.
+        /// Input action that reports whether thrust should currently fire.
         /// </summary>
-        /// <remarks>
-        /// Assign in the Inspector. The action should be of type
-        /// <c>Button</c> (Press / IsPressed) for continuous thrust.
-        /// </remarks>
         [SerializeField] private InputAction _thrust;
+
+        /// <summary>
+        /// Upward thrust strength applied each physics step while thrusting.
+        /// </summary>
+        [SerializeField] private float _thrustStrength = 10f;
+
+        /// <summary>
+        /// Indicates whether the current input state requests thrust.
+        /// </summary>
+        private bool _isThrusting;
+
+        /// <summary>
+        /// Cached Rigidbody used to apply relative thrust forces.
+        /// </summary>
+        private Rigidbody _rb;
 
         #region Unity Methods
 
         /// <summary>
-        /// Called when the component becomes enabled.
-        /// Enables the thrust input action so it can receive input.
+        /// Hooks the thrust action callbacks and enables the action when active.
         /// </summary>
         private void OnEnable()
         {
-            _thrust?.Enable();
+            if (_thrust == null) return;
+            _thrust.performed += OnThrust;
+            _thrust.started += OnThrust;
+            _thrust.canceled += OnThrust;
+            _thrust.Enable();
         }
 
         /// <summary>
-        /// Called when the component becomes disabled.
-        /// Disables the thrust input action to avoid polling when inactive.
+        /// Unhooks callbacks and disables the thrust action when inactive.
         /// </summary>
         private void OnDisable()
         {
-            _thrust?.Disable();
+            if (_thrust == null) return;
+            _thrust.performed -= OnThrust;
+            _thrust.started -= OnThrust;
+            _thrust.canceled -= OnThrust;
+            _thrust.Disable();
         }
 
         /// <summary>
-        /// Unity initialization callback.
-        /// Verifies that the thrust action has been assigned.
+        /// Validates serialized references and caches the Rigidbody.
         /// </summary>
         private void Awake()
         {
             if (_thrust == null)
             {
-                Debug.LogWarning("Thrust action is null! Pleas make sure that the action is assigned in the inspector.", gameObject);
+                Debug.LogWarning("Thrust action is null! Please assign it in the inspector.", gameObject);
                 enabled = false;
+                return;
+            }
+
+            _rb = GetComponent<Rigidbody>();
+        }
+
+        /// <summary>
+        /// Emits a placeholder log while thrust input is held.
+        /// Swap this log for VFX or audio hooks when implementing full movement.
+        /// </summary>
+        private void Update()
+        {
+            if (_isThrusting)
+            {
+                Debug.Log("Ignition nominal; try not to kiss the scenery.");
             }
         }
 
         /// <summary>
-        /// Per-frame update used here to detect thrust input.
-        /// Replace the log with an actual thrust force application when ready.
+        /// Applies upward force when thrust is active.
         /// </summary>
-        private void Update()
+        private void FixedUpdate()
         {
-            if(_thrust.IsPressed())
-            {
-                // Witty placeholder while wiring up real physics:
-                Debug.Log("Ignition nominal—try not to smooch the scenery. 💥🚀");
-            }
+            if (!_isThrusting) return;
+
+            _rb.AddRelativeForce(Vector3.up * (_thrustStrength * Time.fixedDeltaTime));
         }
 
         #endregion
+
+        /// <summary>
+        /// Updates thrust state based on the provided input callback.
+        /// </summary>
+        /// <param name="ctx">Input context supplied by the action callback.</param>
+        private void OnThrust(InputAction.CallbackContext ctx)
+        {
+            _isThrusting = ctx.ReadValueAsButton();
+        }
     }
 }
