@@ -180,7 +180,7 @@ namespace Starlifter
         {
             if (!_isThrusting) return;
             // Witty placeholder message while wiring up real physics:
-            Debug.Log("Ignition nominal; try not to kiss the scenery. 🚀");
+            //Debug.Log("Ignition nominal; try not to kiss the scenery. 🚀");
             _rb.AddRelativeForce(Vector3.up * (_thrustStrength * Time.fixedDeltaTime));
         }
         
@@ -189,7 +189,7 @@ namespace Starlifter
         /// </summary>
         private void ProcessRotation()
         {
-            //Debug.Log($"Rotation input: {_rotationInput}");
+            Debug.Log($"Rotation input: {_rotationInput}");
             if (_rotationInput < 0)
             {
                 ApplyRotation(_rotationStrength);
