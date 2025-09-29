@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 #endregion
 
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -30,6 +31,11 @@ namespace Starlifter
         /// Input action that reports whether thrust should currently fire.
         /// </summary>
         [SerializeField] private InputAction _thrust;
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        [SerializeField] private InputAction _rotation;
 
         /// <summary>
         /// Upward thrust strength applied each physics step while thrusting.
@@ -40,6 +46,16 @@ namespace Starlifter
         /// Indicates whether the current input state requests thrust.
         /// </summary>
         private bool _isThrusting;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private float _rotationInput;
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        private float _rotationInputPrevious;
 
         /// <summary>
         /// Cached Rigidbody used to apply relative thrust forces.
@@ -53,11 +69,21 @@ namespace Starlifter
         /// </summary>
         private void OnEnable()
         {
-            if (_thrust == null) return;
-            _thrust.performed += OnThrust;
-            _thrust.started += OnThrust;
-            _thrust.canceled += OnThrust;
-            _thrust.Enable();
+            if (_thrust != null)
+            {
+                _thrust.performed += OnThrust;
+                _thrust.started += OnThrust;
+                _thrust.canceled += OnThrust;
+                _thrust.Enable();
+            }
+
+            if (_rotation != null)
+            {
+                _rotation.performed += OnRotation;
+                _rotation.started += OnRotation;
+                _rotation.canceled += OnRotation;
+                _rotation.Enable();
+            }
         }
 
         /// <summary>
@@ -65,11 +91,21 @@ namespace Starlifter
         /// </summary>
         private void OnDisable()
         {
-            if (_thrust == null) return;
-            _thrust.performed -= OnThrust;
-            _thrust.started -= OnThrust;
-            _thrust.canceled -= OnThrust;
-            _thrust.Disable();
+            if (_thrust != null)
+            {
+                _thrust.performed -= OnThrust;
+                _thrust.started -= OnThrust;
+                _thrust.canceled -= OnThrust;
+                _thrust.Disable();
+            }
+
+            if (_rotation != null)
+            {
+                _rotation.performed -= OnRotation;
+                _rotation.started -= OnRotation;
+                _rotation.canceled -= OnRotation;
+                _rotation.Disable();
+            }
         }
 
         /// <summary>
@@ -83,6 +119,13 @@ namespace Starlifter
                 enabled = false;
                 return;
             }
+            
+            if (_rotation == null)
+            {
+                Debug.LogWarning("Rotation action is null! Please assign it in the inspector.", gameObject);
+                enabled = false;
+                return;
+            }
 
             _rb = GetComponent<Rigidbody>();
         }
@@ -93,10 +136,7 @@ namespace Starlifter
         /// </summary>
         private void Update()
         {
-            if (_isThrusting)
-            {
-                Debug.Log("Ignition nominal; try not to kiss the scenery.");
-            }
+          
         }
 
         /// <summary>
@@ -104,12 +144,13 @@ namespace Starlifter
         /// </summary>
         private void FixedUpdate()
         {
-            if (!_isThrusting) return;
-
-            _rb.AddRelativeForce(Vector3.up * (_thrustStrength * Time.fixedDeltaTime));
+            ProcessThrust();
+            ProcessRotation();
         }
 
         #endregion
+
+        #region Input Callbacks
 
         /// <summary>
         /// Updates thrust state based on the provided input callback.
@@ -118,6 +159,40 @@ namespace Starlifter
         private void OnThrust(InputAction.CallbackContext ctx)
         {
             _isThrusting = ctx.ReadValueAsButton();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ctx"></param>
+        private void OnRotation(InputAction.CallbackContext ctx)
+        {
+            _rotationInput = ctx.ReadValue<float>();
+        }
+
+        #endregion
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        private void ProcessThrust()
+        {
+            if (!_isThrusting) return;
+            
+            Debug.Log("Ignition nominal; try not to kiss the scenery.");
+
+            _rb.AddRelativeForce(Vector3.up * (_thrustStrength * Time.fixedDeltaTime));
+        }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        private void ProcessRotation()
+        {
+            if (Mathf.Approximately(_rotationInput, _rotationInputPrevious)) return;
+            Debug.Log($"Rotating: {_rotationInput}");
+            
+            _rotationInputPrevious = _rotationInput;
         }
     }
 }

@@ -191,6 +191,15 @@ MonoBehaviour:
       m_Action: Thrust
       m_Flags: 0
     m_Flags: 0
+  _rotation:
+    m_Name: Rotation
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 6b914dca-3183-4201-b5ad-49299c5ee6c9
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings: []
+    m_Flags: 0
   _thrustStrength: 1000
 --- !u!65 &274288421
 BoxCollider:

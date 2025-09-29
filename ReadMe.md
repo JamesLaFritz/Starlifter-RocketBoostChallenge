@@ -109,6 +109,11 @@ Based on your screenshot (white pod with blue glow, red sky, blue towers):
 * Core 3D models, textures, and prefabs provided by [GameDev.tv](https://www.gamedev.tv) (Unity 6 Complete 3D Developer Course).
 * Additional level layouts, effects, and gameplay elements created by *James LaFritz*.
 * Additional 2D art created by **ChatGPT** (OpenAI)
+* Additional 3D art pruchased from by [Synty Studios](https://syntystore.com/) [Synty Studios Asset Store](https://assetstore.unity.com/publishers/5217)
+  * **POLYGON - Sci-Fi Space Pack** [Synty Store](https://syntystore.com/products/polygon-sci-fi-space-pack?_pos=1&_sid=e0a55a0c2&_ss=r) [Asset Store](https://assetstore.unity.com/packages/3d/environments/sci-fi/polygon-sci-fi-space-low-poly-3d-art-by-synty-138857)
+  * **INTERFACE - Sci-Fi Soldier HUD** [Synty Store]() [Asset Store](https://assetstore.unity.com/packages/2d/gui/sci-fi-soldier-hud-synty-interface-gui-278336)
+  * **POLYGON - Sci-Fi Worlds Pack** [Synty Store](https://syntystore.com/products/polygon-sci-fi-worlds?_pos=16&_sid=e0a55a0c2&_ss=r) [Asset Store](https://assetstore.unity.com/packages/3d/environments/sci-fi/polygon-sci-fi-worlds-low-poly-3d-art-by-synty-206299)
+  * **POLYGON - Sci-Fi Cyber City** [Synty Store](https://syntystore.com/products/polygon-sci-fi-cyber-city?_pos=13&_sid=e0a55a0c2&_ss=r) [Asset Store](https://assetstore.unity.com/packages/3d/environments/sci-fi/polygon-sci-fi-cyber-city-low-poly-3d-art-by-synty-259784)
 
 **Music & Sound Effects:**
 
