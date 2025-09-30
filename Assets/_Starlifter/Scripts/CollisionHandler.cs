@@ -19,7 +19,7 @@ namespace Starlifter
 {
     /// <summary>
     /// Responds to collisions for the player rocket by evaluating the collided
-    /// object's tag and executing a contextual response (log + optional flow).
+    /// object's tag and executing a contextual response (log plus optional flow).
     /// </summary>
     /// <remarks>
     /// Expected tags:
@@ -77,12 +77,6 @@ namespace Starlifter
         /// </summary>
         [SerializeField] private GameObject _winVfx;
 
-        /// <summary>
-        /// Build index to load when the level is completed.
-        /// Falls back to 0 if the index is out of range.
-        /// </summary>
-        [SerializeField] private int _nextSceneIndex;
-
         // --- Cached components for state control during scene transitions. ---
         private Rigidbody _rb;
         private Movement _movement;
@@ -110,10 +104,12 @@ namespace Starlifter
             {
                 OnFriendlyCollisionEnter(other);
             }
+            // ToDo: change this to also include a graceful landing
             else if (other.gameObject.CompareTag("Finish"))
             {
                 OnFinishCollisionEnter();
             }
+            //ToDo: change this to be a pickup, and use a pickup interface
             else if (other.gameObject.CompareTag("Fuel"))
             {
                 OnFuelCollisionEnter();
@@ -183,7 +179,7 @@ namespace Starlifter
         /// <param name="sfx">Optional SFX clip to play.</param>
         /// <param name="vfx">Optional VFX GameObject to spawn/enable.</param>
         /// <param name="reloadScene">If true, reloads the current scene after the delay/VFX.</param>
-        /// <param name="levelComplete">If true, loads <see cref="_nextSceneIndex"/> after the delay/VFX.</param>
+        /// <param name="levelComplete">If true, loads next after the delay/VFX.</param>
         /// <param name="delay">
         /// Optional delay (seconds) to wait before scene action.
         /// If null and no VFX are provided, defaults to 1 second.
@@ -217,6 +213,7 @@ namespace Starlifter
             }
             else
             {
+                // ToDo: bring in my CoreFramework library and use the cached wait for seconds.
                 // No VFX timing—use explicit delay or a short default pause.
                 yield return new WaitForSeconds(delay ?? 1f);
             }
@@ -233,11 +230,11 @@ namespace Starlifter
             var loadMode         = hasMultiScenes ? LoadSceneMode.Additive : LoadSceneMode.Single;
 
             if (levelComplete)
-                buildIndex = _nextSceneIndex;
+                buildIndex = currentScene.buildIndex + 1;
 
             // Clamp/loop the index into a valid range.
             if (buildIndex >= SceneManager.sceneCountInBuildSettings)
-                buildIndex = hasMultiScenes ? loadedSceneCount - 2 : 0;
+                buildIndex = hasMultiScenes ? loadedSceneCount - 1 : 0;
 
             // Unload the current scene and Load Next scene Async if not in Single mode.
             if (loadMode != LoadSceneMode.Single)

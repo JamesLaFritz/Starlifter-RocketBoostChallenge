@@ -128,6 +128,8 @@ namespace Starlifter
                 _rotation.canceled  -= OnRotation;
                 _rotation.Disable();
             }
+            
+            if(_hasAudioSource) _audioSource.Stop();
         }
 
         /// <summary>
