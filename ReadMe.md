@@ -37,11 +37,11 @@ Each milestone corresponds to a key section in the Rocket Boost module. You can 
 | --------- | --------------------------- | -------------------------------------------------------------------------------------- |
 |   [ x ]   | 1. Setup & Assets           | Import GameDev.tv assets, basic scene with spaceship & landing pad.                    |
 |   [ x ]   | 2. Player Controls          | Rotation input, AddRelativeForce thrust, Cinemachine follow camera, Rigidbody tuning.  |
-|    [ ]    | 3. Audio & Particles        | Thruster SFX, booster particle effects, multiple audio clips.                          |
-|    [ ]    | 4. Game State Management    | Switch statements for state, SceneManager respawn/level load, debug keys.              |
-|    [ ]    | 5. Level Design & Obstacles | Add colliders/hazards, oscillating objects, multi-level layouts.                       |
-|    [ ]    | 6. Polish & Post-Processing | Quick game tuning, set dressing & lights, intro to post-processing, prefab management. |
-|    [ ]    | 7. Build & Share            | Build PC + WebGL, publish WebGL version to Itch.io.                                    |
+|   [   ]   | 3. Audio & Particles        | Thruster SFX, booster particle effects, multiple audio clips.                          |
+|   [   ]   | 4. Game State Management    | Switch statements for state, SceneManager respawn/level load, debug keys.              |
+|   [   ]   | 5. Level Design & Obstacles | Add colliders/hazards, oscillating objects, multi-level layouts.                       |
+|   [   ]   | 6. Polish & Post-Processing | Quick game tuning, set dressing & lights, intro to post-processing, prefab management. |
+|   [   ]   | 7. Build & Share            | Build PC + WebGL, publish WebGL version to Itch.io.                                    |
 
 ---
 
