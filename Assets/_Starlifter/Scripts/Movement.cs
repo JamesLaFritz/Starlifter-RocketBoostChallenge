@@ -160,9 +160,6 @@ namespace Starlifter
                 _rotation.canceled  -= OnRotation;
                 _rotation.Disable();
             }
-
-            // Stop any playing SFX when disabling.
-            if (_hasAudioSource) _audioSource.Stop();
         }
 
         /// <summary>

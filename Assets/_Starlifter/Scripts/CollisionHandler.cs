@@ -63,6 +63,14 @@ namespace Starlifter
         /// <summary>VFX prefab or object to spawn/enable on finish.</summary>
         [SerializeField] private GameObject _winVfx;
 
+        /// <summary>
+        /// Is this responding to collisions?
+        /// Controls whether this component responds to collisions.
+        /// Useful for disabling during transitions or other gameplay states.
+        /// Default is <c>true</c>.
+        /// </summary>
+        private bool _isControllable = true;
+
         // ─────────────────────────────────────────────────────────────────────
         // Cached components used to suspend control during transitions, etc.
         // ─────────────────────────────────────────────────────────────────────
@@ -101,6 +109,8 @@ namespace Starlifter
         /// <param name="other">Collision info for the contact.</param>
         private void OnCollisionEnter(Collision other)
         {
+            if(!_isControllable) return;
+
             // TODO: Expand to include a "soft touch" if desired.
             if (other.gameObject.CompareTag("Friendly"))
             {
@@ -197,12 +207,13 @@ namespace Starlifter
             {
                 _movement.enabled = false;
                 _rb.isKinematic = true;
+                _isControllable = false;
             }
 
             // Play SFX (if we have an AudioSource and a clip).
             if (_hasAudioSource && sfx)
             {
-                if (_audioSource.isPlaying) _audioSource.Stop();
+                _audioSource.Stop();
                 _audioSource.PlayOneShot(sfx);
             }
 
@@ -254,6 +265,7 @@ namespace Starlifter
             // Re-enable control after the scene transition completes.
             _movement.enabled = true;
             _rb.isKinematic = false;
+            _isControllable = true;
         }
 
         #endregion
