@@ -13,6 +13,7 @@
 
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 namespace Starlifter
@@ -69,6 +70,12 @@ namespace Starlifter
         /// they are ignored (useful during transitions).
         /// </summary>
         private bool _isControllable = true;
+        
+        /// <summary>
+        /// ToDo: change to a toggleable flag so we can toggle individual collisions on and off
+        /// i.e. collide with everything except thing that destroy use
+        /// </summary>
+        private bool _isCollidable = true;
 
         // ─────────────────────────────────────────────────────────────────────
         // Cached components used to suspend control during transitions, etc.
@@ -104,34 +111,38 @@ namespace Starlifter
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        private void Update()
+        {
+#if UNITY_EDITOR
+            RespondToDebugKeys();
+#endif
+        }
+
+        /// <summary>
         /// Physics callback fired when this collider starts colliding with another.
         /// Routes to a specific handler based on the other object's tag.
         /// </summary>
         /// <param name="other">Collision info for the contact.</param>
         private void OnCollisionEnter(Collision other)
         {
-            if (!_isControllable) return;
+            // If we're not controllable or collidable, bail out.
+            // ToDo: add a flag to toggle individual collisions on and off
+            if (!_isControllable || !_isCollidable) return;
 
             // Friendly → harmless touch feedback.
             if (other.gameObject.CompareTag("Friendly"))
-            {
                 OnFriendlyCollisionEnter(other);
-            }
             // Finish → successful landing; advance after a short delay/VFX.
             else if (other.gameObject.CompareTag("Finish"))
-            {
                 OnFinishCollisionEnter(other);
-            }
             // Pickup → route to pickup handling (e.g., fuel).
             else if (other.gameObject.CompareTag("Pickup"))
-            {
                 OnPickupCollisionEnter(other);
-            }
             // Default → treat as a crash; reload.
             else
-            {
                 OnDestroyCollisionEnter(other);
-            }
         }
 
         #endregion
@@ -251,6 +262,9 @@ namespace Starlifter
                 // TODO(James): Replace with CoreFramework's cached WaitForSeconds if available.
                 yield return new WaitForSeconds(delay ?? 1f);
             }
+            
+            _movement.enabled = true;
+            _rb.isKinematic = false;
 
             // If no scene transition requested, we're done.
             if (!reloadScene && !levelComplete) yield break;
@@ -276,19 +290,40 @@ namespace Starlifter
             {
                 yield return SceneManager.UnloadSceneAsync(currentScene);
                 yield return SceneManager.LoadSceneAsync(nextIndex, loadMode);
+                // Re-enable control after the scene transition completes.
+                _isControllable = true;
             }
             else
             {
+                // Re-enable control after the scene transition completes.
+                _isControllable = true;
                 // Single: replace the current scene.
                 SceneManager.LoadScene(nextIndex, loadMode);
             }
-
-            // Re-enable control after the scene transition completes.
-            _movement.enabled = true;
-            _rb.isKinematic = false;
-            _isControllable = true;
         }
 
         #endregion
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        private void RespondToDebugKeys()
+        {
+            
+#if UNITY_EDITOR
+            
+            var keyboard = Keyboard.current;
+            if (keyboard.lKey.wasPressedThisFrame)
+                StartCoroutine(CollisionEnterCoroutine(null, null, false, true, 0f));
+            else if (keyboard.rKey.wasPressedThisFrame)
+                StartCoroutine(CollisionEnterCoroutine(null, null, true, false, 0f));
+            else if (keyboard.cKey.wasPressedThisFrame)
+            {
+                _isCollidable = !_isCollidable;
+                // ToDo: add SFX and/or VFX for this being toggled.
+                // possible different for each state.
+            }
+#endif
+        }
     }
 }

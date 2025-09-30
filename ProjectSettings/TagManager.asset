@@ -5,7 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Friendly
-  - Fuel
+  - Pickup
   layers:
   - Default
   - TransparentFX
