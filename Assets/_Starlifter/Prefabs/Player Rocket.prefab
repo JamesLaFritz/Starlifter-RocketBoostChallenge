@@ -305,8 +305,8 @@ MonoBehaviour:
       m_Action: Rotation
       m_Flags: 8
     m_Flags: 0
-  _thrustStrength: 1500
-  _rotationStrength: 100
+  _thrustStrength: 3000
+  _rotationStrength: 200
   _thrustSfx: {fileID: 8300000, guid: eaaa7459969efd44e8be2d569deb6fa7, type: 3}
   _thrusterVfx: {fileID: 6087138983067354391}
   _rotateLeftVfx: {fileID: 8091155307364805247}
@@ -326,12 +326,10 @@ MonoBehaviour:
   _delay: 1.5
   _collidedSfx: {fileID: 8300000, guid: 47c831868fd19814da06274db7f4afda, type: 3}
   _collidedVfx: {fileID: 3171395530247588860}
-  _friendlySfx: {fileID: 0}
-  _fuelVfx: {fileID: 0}
-  _fuelSfx: {fileID: 0}
-  _friendlyVfx: {fileID: 0}
   _winSfx: {fileID: 8300000, guid: 391d4c63cbf0d714ba8b7838046f7310, type: 3}
   _winVfx: {fileID: 7209612316215931990}
+  _friendlySfx: {fileID: 0}
+  _friendlyVfx: {fileID: 0}
 --- !u!1001 &3369577920219137340
 PrefabInstance:
   m_ObjectHideFlags: 0
