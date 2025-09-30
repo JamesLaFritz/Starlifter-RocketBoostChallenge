@@ -23,11 +23,11 @@ namespace Starlifter
     /// Requires a <see cref="Rigidbody"/> on the same GameObject and two
     /// <see cref="InputAction"/> references:
     /// <list type="bullet">
-    /// <item><description><c>_thrust</c> — button-style action (IsPressed) to fire thrusters.</description></item>
-    /// <item><description><c>_rotation</c> — axis-style action (-1..1) to rotate left/right.</description></item>
+    /// <item><description><c>_thrust</c>: button-style action (IsPressed) to fire thrusters.</description></item>
+    /// <item><description><c>_rotation</c>: axis-style action (-1..1) to rotate left/right.</description></item>
     /// </list>
     /// If an <see cref="AudioSource"/> exists on the GameObject, it will be
-    /// auto-detected and played while thrust is active.
+    /// auto-detected and used for thruster SFX while thrust is active.
     /// </remarks>
     [RequireComponent(typeof(Rigidbody))]
     public class Movement : MonoBehaviour
@@ -46,16 +46,22 @@ namespace Starlifter
 
         /// <summary>
         /// Magnitude of upward relative force applied each physics step while thrusting.
-        /// Units are force per fixed frame (scaled by <see cref="Time.fixedDeltaTime"/>).
+        /// Units are “force per fixed frame” (scaled by <see cref="Time.fixedDeltaTime"/>).
         /// </summary>
-        [Tooltip("Magnitude of upward relative force applied each physics step while thrusting. Units are force per fixed frame (scaled by Time.fixedDeltaTime).")]
+        [Tooltip("Magnitude of upward relative force per FixedUpdate while thrusting (scaled by Time.fixedDeltaTime).")]
         [SerializeField] private float _thrustStrength = 100f;
 
         /// <summary>
         /// Degrees per second applied to the transform while rotating (scaled by fixed delta time).
         /// </summary>
-        [Tooltip("Degrees per second applied to the transform while rotating (scaled by fixed delta time).")]
+        [Tooltip("Degrees per second applied while rotating (scaled by Time.fixedDeltaTime).")]
         [SerializeField] private float _rotationStrength = 100f;
+
+        /// <summary>
+        /// Optional one-shot SFX played when thrust begins.
+        /// </summary>
+        [Tooltip("Optional one-shot SFX played when thrust begins.")]
+        [SerializeField] private AudioClip _thrustSfx;
 
         /// <summary>
         /// Whether the current input state requests thrust.
@@ -83,6 +89,32 @@ namespace Starlifter
         private bool _hasAudioSource;
 
         #region Unity Methods
+
+        /// <summary>
+        /// Validates serialized references, caches components, and sets up optional audio.
+        /// </summary>
+        private void Awake()
+        {
+            // Verify thrust action is assigned and has at least one bound control.
+            if (_thrust == null || _thrust.controls.Count < 1)
+            {
+                Debug.LogWarning("Thrust action is null or unbound! Please assign it in the inspector.", gameObject);
+                enabled = false;
+                return;
+            }
+
+            // Verify rotation action is assigned and has at least one bound control.
+            if (_rotation == null || _rotation.controls.Count < 1)
+            {
+                Debug.LogWarning("Rotation action is null or unbound! Please assign it in the inspector.", gameObject);
+                enabled = false;
+                return;
+            }
+
+            // Cache required Rigidbody and optional AudioSource.
+            _rb = GetComponent<Rigidbody>();
+            _hasAudioSource = TryGetComponent(out _audioSource);
+        }
 
         /// <summary>
         /// Subscribes to input callbacks and enables actions when the component becomes active.
@@ -128,34 +160,9 @@ namespace Starlifter
                 _rotation.canceled  -= OnRotation;
                 _rotation.Disable();
             }
-            
-            if(_hasAudioSource) _audioSource.Stop();
-        }
 
-        /// <summary>
-        /// Validates serialized references, caches components, and sets up optional audio.
-        /// </summary>
-        private void Awake()
-        {
-            // Ensure thrust action exists.
-            if (_thrust == null || _thrust.controls.Count < 1)
-            {
-                Debug.LogWarning("Thrust action is null! Please assign it in the inspector.", gameObject);
-                enabled = false;
-                return;
-            }
-
-            // Ensure rotation action exists.
-            if (_rotation == null || _rotation.controls.Count < 1)
-            {
-                Debug.LogWarning("Rotation action is null! Please assign it in the inspector.", gameObject);
-                enabled = false;
-                return;
-            }
-
-            // Cache required Rigidbody and optional AudioSource.
-            _rb = GetComponent<Rigidbody>();
-            _hasAudioSource = TryGetComponent(out _audioSource);
+            // Stop any playing SFX when disabling.
+            if (_hasAudioSource) _audioSource.Stop();
         }
 
         /// <summary>
@@ -165,15 +172,18 @@ namespace Starlifter
         {
             if (!_hasAudioSource) return;
 
-            // Start/stop looped thruster sound based on _isThrusting.
-            switch (_isThrusting)
+            // Start a one-shot when the thrust begins; stop if thrust released.
+            if (_isThrusting && !_audioSource.isPlaying && _thrustSfx != null)
             {
-                case true when !_audioSource.isPlaying:
-                    _audioSource.Play();
-                    break;
-                case false when _audioSource.isPlaying:
-                    _audioSource.Stop();
-                    break;
+                _audioSource.PlayOneShot(_thrustSfx);
+                // Optional witty line (uncomment if desired):
+                // Debug.Log("Ignition nominal—please keep hands and fins inside the vehicle. 🚀");
+            }
+            else if (!_isThrusting && _audioSource.isPlaying)
+            {
+                _audioSource.Stop();
+                // Optional witty line:
+                // Debug.Log("Throttling down—we now return to your regularly scheduled gravity.");
             }
         }
 
@@ -216,9 +226,6 @@ namespace Starlifter
         private void ProcessThrust()
         {
             if (!_isThrusting) return;
-            
-            // Witty placeholder message while wiring up real physics:
-            //Debug.Log("Ignition nominal; try not to kiss the scenery. 🚀");
 
             // Apply thrust in the rocket's local "up" direction.
             _rb.AddRelativeForce(Vector3.up * (_thrustStrength * Time.fixedDeltaTime));
@@ -231,7 +238,6 @@ namespace Starlifter
         {
             switch (_rotationInput)
             {
-                //Debug.Log($"Rotation input: {_rotationInput}");
                 // Positive input rotates right (negative Z), negative input rotates left (positive Z).
                 case < 0f:
                     ApplyRotation(_rotationStrength);

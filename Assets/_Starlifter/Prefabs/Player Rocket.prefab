@@ -48,7 +48,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: eaaa7459969efd44e8be2d569deb6fa7, type: 3}
+  m_Resource: {fileID: 0}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -302,6 +302,7 @@ MonoBehaviour:
     m_Flags: 0
   _thrustStrength: 1000
   _rotationStrength: 100
+  _thrustSfx: {fileID: 8300000, guid: eaaa7459969efd44e8be2d569deb6fa7, type: 3}
 --- !u!114 &8331990518683494342
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -314,15 +315,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07f30bb55b7241ffb20b5e86c0ec1f2a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Starlifter.CollisionHandler
-  _collidedSfx: {fileID: 0}
+  _collidedSfx: {fileID: 8300000, guid: 47c831868fd19814da06274db7f4afda, type: 3}
   _collidedVfx: {fileID: 0}
   _friendlySfx: {fileID: 0}
   _fuelVfx: {fileID: 0}
   _fuelSfx: {fileID: 0}
   _friendlyVfx: {fileID: 0}
-  _winSfx: {fileID: 0}
+  _winSfx: {fileID: 8300000, guid: 391d4c63cbf0d714ba8b7838046f7310, type: 3}
   _winVfx: {fileID: 0}
-  _nextSceneIndex: 0
 --- !u!1001 &7226463914250731088
 PrefabInstance:
   m_ObjectHideFlags: 0
