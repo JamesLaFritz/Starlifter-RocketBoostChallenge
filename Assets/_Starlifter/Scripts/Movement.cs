@@ -1,11 +1,11 @@
 #region Header
 // -----------------------------------------------------------------------------
 // Movement.cs
-// Author: James LaFritz
+// Author James LaFritz
 // Created: 2025-09-29
 // Description: Reads thrust and rotation input via Unity's Input System and
-//              applies forces to a Rigidbody. Also toggles a thruster AudioSource
-//              (if present) while thrust is held.
+//              applies forces to a Rigidbody. Also toggles thruster SFX/VFX
+//              (if present) while thrust/rotation are active.
 // Project: Starlifter: Rocket Boost Challenge
 // Notes: GDD and code documentation written with assistance from ChatGPT.
 // -----------------------------------------------------------------------------
@@ -20,78 +20,76 @@ namespace Starlifter
     /// Handles player-controlled thrust and rotation for the rocket.
     /// </summary>
     /// <remarks>
-    /// Requires a <see cref="Rigidbody"/> on the same GameObject and two
-    /// <see cref="InputAction"/> references:
+    /// Requires a <see cref="Rigidbody"/> on the same GameObject and two <see cref="InputAction"/> references:
     /// <list type="bullet">
     /// <item><description><c>_thrust</c>: button-style action (IsPressed) to fire thrusters.</description></item>
     /// <item><description><c>_rotation</c>: axis-style action (-1..1) to rotate left/right.</description></item>
     /// </list>
-    /// If an <see cref="AudioSource"/> exists on the GameObject, it will be
-    /// auto-detected and used for thruster SFX while thrust is active.
+    /// If an <see cref="AudioSource"/> exists on the GameObject, it will be auto-detected and used for thruster SFX.
+    /// Optional <see cref="ParticleSystem"/> fields control thrust and side-jet VFX.
     /// </remarks>
     [RequireComponent(typeof(Rigidbody))]
     public class Movement : MonoBehaviour
     {
-        /// <summary>
-        /// Button action that indicates whether thrust should currently fire.
-        /// </summary>
+        #region Fields
+
+        /// <summary>Button action that indicates whether thrust should currently fire.</summary>
         [Tooltip("Button action that indicates whether thrust should currently fire.")]
         [SerializeField] private InputAction _thrust;
 
-        /// <summary>
-        /// Axis action providing rotation input. Negative rotates left; positive rotates right.
-        /// </summary>
+        /// <summary>Axis action providing rotation input. Negative rotates left; positive rotates right.</summary>
         [Tooltip("Axis action providing rotation input. Negative rotates left; positive rotates right.")]
         [SerializeField] private InputAction _rotation;
 
         /// <summary>
-        /// Magnitude of upward relative force applied each physics step while thrusting.
-        /// Units are “force per fixed frame” (scaled by <see cref="Time.fixedDeltaTime"/>).
+        /// Magnitude of upward relative force applied to each physics step while thrusting.
+        /// Units are "force per fixed frame" (scaled by <see cref="Time.fixedDeltaTime"/>).
         /// </summary>
         [Tooltip("Magnitude of upward relative force per FixedUpdate while thrusting (scaled by Time.fixedDeltaTime).")]
         [SerializeField] private float _thrustStrength = 100f;
 
-        /// <summary>
-        /// Degrees per second applied to the transform while rotating (scaled by fixed delta time).
-        /// </summary>
+        /// <summary>Degrees per second applied to the transform while rotating (scaled by fixed delta time).</summary>
         [Tooltip("Degrees per second applied while rotating (scaled by Time.fixedDeltaTime).")]
         [SerializeField] private float _rotationStrength = 100f;
 
-        /// <summary>
-        /// Optional one-shot SFX played when thrust begins.
-        /// </summary>
+        /// <summary>Optional one-shot SFX played when thrust begins.</summary>
         [Tooltip("Optional one-shot SFX played when thrust begins.")]
         [SerializeField] private AudioClip _thrustSfx;
 
-        /// <summary>
-        /// Whether the current input state requests thrust.
-        /// </summary>
+        /// <summary>Optional VFX <see cref="ParticleSystem"/> played while thrusting.</summary>
+        [Tooltip("Optional VFX ParticleSystem played when thrust begins.")]
+        [SerializeField] private ParticleSystem _thrusterVfx;
+
+        /// <summary>Optional VFX <see cref="ParticleSystem"/> played while rotating left.</summary>
+        [Tooltip("Optional VFX ParticleSystem played when rotating to the left.")]
+        [SerializeField] private ParticleSystem _rotateLeftVfx;
+
+        /// <summary>Optional VFX <see cref="ParticleSystem"/> played while rotating right.</summary>
+        [Tooltip("Optional VFX ParticleSystem played when rotating to the right.")]
+        [SerializeField] private ParticleSystem _rotateRightVfx;
+
+        /// <summary>Whether the current input state requests thrust.</summary>
         private bool _isThrusting;
 
-        /// <summary>
-        /// Current rotation axis value from input (-1..1).
-        /// </summary>
+        /// <summary>Current rotation axis value from input (-1..1).</summary>
         private float _rotationInput;
 
-        /// <summary>
-        /// Cached rigidbody used to apply relative forces and to temporarily freeze rotation.
-        /// </summary>
+        /// <summary>Cached rigidbody used to apply relative forces and to temporarily freeze rotation.</summary>
         private Rigidbody _rb;
 
-        /// <summary>
-        /// Optional audio source used to play thruster sound while thrusting.
-        /// </summary>
+        /// <summary>Optional audio source used to play thruster sound while thrusting.</summary>
         private AudioSource _audioSource;
 
-        /// <summary>
-        /// Indicates whether an <see cref="AudioSource"/> was found on this GameObject.
-        /// </summary>
+        /// <summary>Indicates whether an <see cref="AudioSource"/> was found on this GameObject.</summary>
         private bool _hasAudioSource;
+
+        #endregion
 
         #region Unity Methods
 
         /// <summary>
         /// Validates serialized references, caches components, and sets up optional audio.
+        /// Disables the component if input actions are missing or unbound.
         /// </summary>
         private void Awake()
         {
@@ -141,10 +139,14 @@ namespace Starlifter
         }
 
         /// <summary>
-        /// Unsubscribes from input callbacks and disables actions when the component is deactivated.
+        /// Unsubscribes from input callbacks, disables actions, and stops any active VFX when the component is deactivated.
         /// </summary>
         private void OnDisable()
         {
+            // Ensure any rotation/thrust effects are stopped.
+            StopRotationEffects();
+            if (_thrusterVfx) _thrusterVfx.Stop();
+
             if (_thrust != null)
             {
                 _thrust.started   -= OnThrust;
@@ -159,28 +161,6 @@ namespace Starlifter
                 _rotation.performed -= OnRotation;
                 _rotation.canceled  -= OnRotation;
                 _rotation.Disable();
-            }
-        }
-
-        /// <summary>
-        /// Toggles thruster audio (if present) in response to the current thrust state.
-        /// </summary>
-        private void Update()
-        {
-            if (!_hasAudioSource) return;
-
-            // Start a one-shot when the thrust begins; stop if thrust released.
-            if (_isThrusting && !_audioSource.isPlaying && _thrustSfx != null)
-            {
-                _audioSource.PlayOneShot(_thrustSfx);
-                // Optional witty line (uncomment if desired):
-                // Debug.Log("Ignition nominal—please keep hands and fins inside the vehicle. 🚀");
-            }
-            else if (!_isThrusting && _audioSource.isPlaying)
-            {
-                _audioSource.Stop();
-                // Optional witty line:
-                // Debug.Log("Throttling down—we now return to your regularly scheduled gravity.");
             }
         }
 
@@ -217,19 +197,60 @@ namespace Starlifter
 
         #endregion
 
+        #region Thrust
+
         /// <summary>
-        /// Applies an upward relative force while the thrust input is held.
+        /// Applies an upward relative force while the thrust input is held and manages thrust SFX/VFX.
         /// </summary>
         private void ProcessThrust()
         {
-            if (!_isThrusting) return;
-
-            // Apply thrust in the rocket's local "up" direction.
-            _rb.AddRelativeForce(Vector3.up * (_thrustStrength * Time.fixedDeltaTime));
+            if (_isThrusting)
+            {
+                StartThrusting();
+            }
+            else
+            {
+                StopThrusting();
+            }
         }
 
         /// <summary>
-        /// Rotates the rocket based on the signed rotation input.
+        /// Begins thrust behavior: applies force and starts SFX/VFX if available.
+        /// </summary>
+        private void StartThrusting()
+        {
+            // Apply thrust in the rocket's local "up" direction.
+            _rb.AddRelativeForce(Vector3.up * (_thrustStrength * Time.fixedDeltaTime));
+
+            // Kick off one-shot SFX when thrust begins.
+            if (_hasAudioSource && !_audioSource.isPlaying && _thrustSfx)
+            {
+                _audioSource.PlayOneShot(_thrustSfx);
+                // Optional witty line:
+                // Debug.Log("Ignition nominal—please keep hands and fins inside the vehicle. 🚀");
+            }
+
+            // Enable main thruster VFX.
+            if (_thrusterVfx && !_thrusterVfx.isPlaying) _thrusterVfx.Play();
+        }
+
+        /// <summary>
+        /// Ends thrust behavior: stops SFX/VFX if they are playing.
+        /// </summary>
+        private void StopThrusting()
+        {
+            if (_hasAudioSource && _audioSource.isPlaying) _audioSource.Stop();
+            if (_thrusterVfx && _thrusterVfx.isPlaying) _thrusterVfx.Stop();
+            // Optional witty line:
+            // Debug.Log("Throttling down—we now return to your regularly scheduled gravity.");
+        }
+
+        #endregion
+        
+        #region Rotation
+
+        /// <summary>
+        /// Rotates the rocket based on the signed rotation input and manages side-jet VFX.
         /// </summary>
         private void ProcessRotation()
         {
@@ -237,12 +258,41 @@ namespace Starlifter
             {
                 // Positive input rotates right (negative Z), negative input rotates left (positive Z).
                 case < 0f:
-                    ApplyRotation(_rotationStrength);
+                    RotateLeft();
                     break;
                 case > 0f:
-                    ApplyRotation(-_rotationStrength);
+                    RotateRight();
+                    break;
+                default:
+                    StopRotation();
                     break;
             }
+        }
+
+        /// <summary>
+        /// Applies left rotation and toggles left/right VFX accordingly.
+        /// </summary>
+        private void RotateLeft()
+        {
+            ApplyRotation(_rotationStrength);
+            ApplyRotationEffects(_rotateRightVfx, _rotateLeftVfx);
+        }
+
+        /// <summary>
+        /// Applies right rotation and toggles left/right VFX accordingly.
+        /// </summary>
+        private void RotateRight()
+        {
+            ApplyRotation(-_rotationStrength);
+            ApplyRotationEffects(_rotateLeftVfx, _rotateRightVfx);
+        }
+
+        /// <summary>
+        /// Stops any rotation-specific VFX when no rotation input is present.
+        /// </summary>
+        private void StopRotation()
+        {
+            StopRotationEffects();
         }
 
         /// <summary>
@@ -261,5 +311,27 @@ namespace Starlifter
             // Re-enable physics-based rotation.
             _rb.freezeRotation = false;
         }
+
+        /// <summary>
+        /// Helper to stop one side’s VFX and play the other side’s VFX during rotation.
+        /// </summary>
+        /// <param name="stoppedVfx">VFX to stop (opposite side).</param>
+        /// <param name="playingVfx">VFX to play (active side).</param>
+        private static void ApplyRotationEffects(ParticleSystem stoppedVfx, ParticleSystem playingVfx)
+        {
+            if (stoppedVfx) stoppedVfx.Stop();
+            if (playingVfx) playingVfx.Play();
+        }
+
+        /// <summary>
+        /// Stops both left and right rotation VFX.
+        /// </summary>
+        private void StopRotationEffects()
+        {
+            if (_rotateRightVfx) _rotateRightVfx.Stop();
+            if (_rotateLeftVfx) _rotateLeftVfx.Stop();
+        }
+
+        #endregion
     }
 }

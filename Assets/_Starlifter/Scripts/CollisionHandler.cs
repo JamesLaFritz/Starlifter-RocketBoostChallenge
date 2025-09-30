@@ -26,48 +26,47 @@ namespace Starlifter
     /// Expected tags:
     /// <list type="bullet">
     /// <item><description><c>Friendly</c> — harmless contact (no penalty).</description></item>
-    /// <item><description><c>Finish</c> — level complete / safe landing.</description></item>
-    /// <item><description><c>Fuel</c> — refuel pickup.</description></item>
+    /// <item><description><c>Finish</c> — level complete / safe landing (advance).</description></item>
+    /// <item><description><c>Pickup</c> — collectible item (e.g., fuel), routed to pickup handling.</description></item>
     /// <item><description>(default) — treated as a hazard / crash (reload).</description></item>
     /// </list>
-    /// Replace TODOs with real SFX/VFX integration and progression logic (fuel system, UI, etc.).
+    /// Replace TODOs with real SFX/VFX integration and progression logic (fuel system, UI, pickup interface, etc.).
     /// </remarks>
     [RequireComponent(typeof(Rigidbody), typeof(Movement))]
     public class CollisionHandler : MonoBehaviour
     {
+        #region Fields
+
         // ─────────────────────────────────────────────────────────────────────
         // Serialized SFX/VFX slots (optional). If assigned, the coroutine uses them.
         // ─────────────────────────────────────────────────────────────────────
 
-        /// <summary>Audio to play when colliding with a hazard (default case).</summary>
+        /// <summary>
+        /// Amount of time (seconds) to wait before triggering the scene transition.
+        /// </summary>
+        [SerializeField] private float _delay = 2f;
+
+        /// <summary>Audio to play when colliding with a hazard (a default/crash case).</summary>
         [SerializeField] private AudioClip _collidedSfx;
 
-        /// <summary>VFX prefab or object to spawn/enable on hazard collision.</summary>
-        [SerializeField] private GameObject _collidedVfx;
-
-        /// <summary>Audio to play when colliding with a friendly object.</summary>
-        [SerializeField] private AudioClip _friendlySfx;
-
-        /// <summary>VFX prefab or object to spawn/enable on fuel pickup.</summary>
-        [SerializeField] private GameObject _fuelVfx;
-
-        /// <summary>Audio to play when picking up fuel.</summary>
-        [SerializeField] private AudioClip _fuelSfx;
-
-        /// <summary>VFX prefab or object to spawn/enable on friendly collision.</summary>
-        [SerializeField] private GameObject _friendlyVfx;
+        /// <summary>VFX <see cref="ParticleSystem"/> to play on hazard collision.</summary>
+        [SerializeField] private ParticleSystem _collidedVfx;
 
         /// <summary>Audio to play when finishing the level (successful landing).</summary>
         [SerializeField] private AudioClip _winSfx;
 
-        /// <summary>VFX prefab or object to spawn/enable on finish.</summary>
-        [SerializeField] private GameObject _winVfx;
+        /// <summary>VFX <see cref="ParticleSystem"/> to play on finish.</summary>
+        [SerializeField] private ParticleSystem _winVfx;
+
+        /// <summary>Audio to play when colliding with a friendly object.</summary>
+        [SerializeField] private AudioClip _friendlySfx;
+
+        /// <summary>VFX <see cref="ParticleSystem"/> to play on friendly collision.</summary>
+        [SerializeField] private ParticleSystem _friendlyVfx;
 
         /// <summary>
-        /// Is this responding to collisions?
-        /// Controls whether this component responds to collisions.
-        /// Useful for disabling during transitions or other gameplay states.
-        /// Default is <c>true</c>.
+        /// When <see langword="true"/>, collisions are processed; when <see langword="false"/>,
+        /// they are ignored (useful during transitions).
         /// </summary>
         private bool _isControllable = true;
 
@@ -78,14 +77,16 @@ namespace Starlifter
         /// <summary>Cached rigidbody used to lock physics during transitions.</summary>
         private Rigidbody _rb;
 
-        /// <summary>Cached Movement component used to enable/disable player control.</summary>
+        /// <summary>Cached <see cref="Movement"/> used to enable/disable player control.</summary>
         private Movement _movement;
 
-        /// <summary>Optional AudioSource used to play one-shot collision SFX.</summary>
+        /// <summary>Optional <see cref="AudioSource"/> used to play one-shot collision SFX.</summary>
         private AudioSource _audioSource;
 
         /// <summary>Indicates whether an <see cref="AudioSource"/> was found on this GameObject.</summary>
         private bool _hasAudioSource;
+
+        #endregion
 
         #region Unity Methods
 
@@ -109,23 +110,24 @@ namespace Starlifter
         /// <param name="other">Collision info for the contact.</param>
         private void OnCollisionEnter(Collision other)
         {
-            if(!_isControllable) return;
+            if (!_isControllable) return;
 
-            // TODO: Expand to include a "soft touch" if desired.
+            // Friendly → harmless touch feedback.
             if (other.gameObject.CompareTag("Friendly"))
             {
                 OnFriendlyCollisionEnter(other);
             }
-            // TODO: Expand to include a "soft up right landing" if desired.
+            // Finish → successful landing; advance after a short delay/VFX.
             else if (other.gameObject.CompareTag("Finish"))
             {
-                OnFinishCollisionEnter();
+                OnFinishCollisionEnter(other);
             }
-            // TODO: Convert to a generic pickup system via an IPickup interface.
-            else if (other.gameObject.CompareTag("Fuel"))
+            // Pickup → route to pickup handling (e.g., fuel).
+            else if (other.gameObject.CompareTag("Pickup"))
             {
-                OnFuelCollisionEnter();
+                OnPickupCollisionEnter(other);
             }
+            // Default → treat as a crash; reload.
             else
             {
                 OnDestroyCollisionEnter(other);
@@ -143,6 +145,14 @@ namespace Starlifter
         /// <param name="other">Collision data for the friendly object.</param>
         private void OnFriendlyCollisionEnter(Collision other)
         {
+            //ToDo: Check if the rocket is within allowable angle to and speed to safely collide with the friendly object.
+            // var inLimits = true;
+            // if (!inLimits)
+            // {
+            //     OnDestroyCollisionEnter(other);
+            //     return;
+            // }
+            
             // Witty friendly nudge:
             Debug.Log($"{name} gently booped {other.gameObject.name}. Friendship: 1, dents: 0.");
             StartCoroutine(CollisionEnterCoroutine(_friendlySfx, _friendlyVfx, reloadScene: false, levelComplete: false));
@@ -150,37 +160,48 @@ namespace Starlifter
 
         /// <summary>
         /// Handles a successful landing (tagged <c>Finish</c>).
-        /// Logs a message and advances to the next scene.
+        /// Logs a message and advances to the next scene after a brief delay/VFX.
         /// </summary>
-        private void OnFinishCollisionEnter()
+        /// <param name="other">Collision data for the friendly object.</param>
+        private void OnFinishCollisionEnter(Collision other)
         {
+            //ToDo: Check if the rocket is within allowable angle to and speed to land safely.
+            // var inLimits = true;
+            // if (!inLimits)
+            // {
+            //     OnDestroyCollisionEnter(other);
+            //     return;
+            // }
+            
             // Witty success line:
             Debug.Log("Touchdown confirmed! Mission Control says, “nailed it.” 🏁");
-            StartCoroutine(CollisionEnterCoroutine(_winSfx, _winVfx, reloadScene: false, levelComplete: true));
+            StartCoroutine(CollisionEnterCoroutine(_winSfx, _winVfx, reloadScene: false, levelComplete: true, delay: _delay));
         }
 
         /// <summary>
-        /// Handles a fuel pickup (tagged <c>Fuel</c>).
-        /// Logs a message and (future) increases fuel via a fuel system.
+        /// Handles a pickup (tagged <c>Pickup</c>).
+        /// Logs a message and (future) applies pickup logic via a pickup interface.
         /// </summary>
-        private void OnFuelCollisionEnter()
+        /// <param name="other">Collision data for the pickup object.</param>
+        private void OnPickupCollisionEnter(Collision other)
         {
-            // Witty refuel line:
+            // TODO: Apply pickup logic via IPickup (increase fuel, update UI, etc.).
+            // e.g., var pickup = other.gameObject.GetComponent<IPickup>(); if (pickup) pickup.Collect();
+
+            // Witty pickup line (temporary here until a dedicated pickup script handles feedback):
             Debug.Log("Fuel acquired! Glug-glug—now serving premium-grade optimism. ⛽");
-            // TODO: Apply actual fuel logic (increase tank, update UI) vi IPickUp interface.
-            StartCoroutine(CollisionEnterCoroutine(_fuelSfx, _fuelVfx, reloadScene: false, levelComplete: false));
         }
 
         /// <summary>
         /// Handles a crash or unknown tag (default case).
-        /// Logs a message and reloads the current scene.
+        /// Logs a message and reloads the current scene after a brief delay/VFX.
         /// </summary>
         /// <param name="other">Collision data for the hazard object.</param>
         private void OnDestroyCollisionEnter(Collision other)
         {
             // Witty failure line:
             Debug.Log($"Catastrophic high-five with {other.gameObject.name}. Rocket now in ‘abstract art’ mode. 💥");
-            StartCoroutine(CollisionEnterCoroutine(_collidedSfx, _collidedVfx, reloadScene: true, levelComplete: false));
+            StartCoroutine(CollisionEnterCoroutine(_collidedSfx, _collidedVfx, reloadScene: true, levelComplete: false, delay: _delay));
         }
 
         /// <summary>
@@ -188,21 +209,21 @@ namespace Starlifter
         /// temporarily disables control for fail/success, then reloads or advances scenes.
         /// </summary>
         /// <param name="sfx">Optional one-shot audio clip to play.</param>
-        /// <param name="vfx">Optional VFX object to instantiate/enable.</param>
-        /// <param name="reloadScene">When true, reloads the current scene after delay/VFX.</param>
-        /// <param name="levelComplete">When true, advances to the next scene after delay/VFX.</param>
+        /// <param name="vfx">Optional VFX <see cref="ParticleSystem"/> to play.</param>
+        /// <param name="reloadScene">When <see langword="true"/>, reloads the current scene after delay/VFX.</param>
+        /// <param name="levelComplete">When <see langword="true"/>, advances to the next scene after delay/VFX.</param>
         /// <param name="delay">
         /// Optional delay (seconds) before scene action. If <c>null</c> and no VFX provided,
-        /// defaults to 1 second. If VFX is provided, replace this with VFX duration as needed.
+        /// defaults to 1 second. If VFX is provided, its duration is used when <paramref name="delay"/> is <c>null</c>.
         /// </param>
         private IEnumerator CollisionEnterCoroutine(
             AudioClip sfx,
-            GameObject vfx,
+            ParticleSystem vfx,
             bool reloadScene,
             bool levelComplete,
             float? delay = null)
         {
-            // If transitioning, temporarily disable control and physics motion.
+            // If transitioning, temporarily disable player control and physics.
             if (reloadScene || levelComplete)
             {
                 _movement.enabled = false;
@@ -217,17 +238,17 @@ namespace Starlifter
                 _audioSource.PlayOneShot(sfx);
             }
 
-            // Trigger VFX (instantiate or enable a pooled effect), or fallback to a delay.
+            // Trigger VFX (if provided) and wait for either explicit delay or VFX duration.
             if (vfx)
             {
-                // Example:
-                // var vfxInstance = Object.Instantiate(vfx, transform.position, Quaternion.identity);
-                // yield return new WaitForSeconds(vfxDuration);
+                vfx.Play();
+                // TODO(James): Replace with CoreFramework's cached WaitForSeconds if available.
+                yield return new WaitForSeconds(delay ?? vfx.main.duration);
             }
             else
             {
-                // No VFX timing—use explicit delay or short default pause.
-                // TODO: Replace with CoreFramework's cached WaitForSeconds if available.
+                // No VFX timing—use explicit delay or a short default pause.
+                // TODO(James): Replace with CoreFramework's cached WaitForSeconds if available.
                 yield return new WaitForSeconds(delay ?? 1f);
             }
 
@@ -235,12 +256,12 @@ namespace Starlifter
             if (!reloadScene && !levelComplete) yield break;
 
             // Decide which scene to load and how (Single vs. Additive).
-            var currentScene     = SceneManager.GetActiveScene();
-            var totalInBuild  = SceneManager.sceneCountInBuildSettings;
-            var loadedCount      = SceneManager.loadedSceneCount;
-            var hasMultiScenes   = totalInBuild > 1 && loadedCount > 1;
+            var currentScene   = SceneManager.GetActiveScene();
+            var totalInBuild   = SceneManager.sceneCountInBuildSettings;
+            var loadedCount    = SceneManager.loadedSceneCount;
+            var hasMultiScenes = totalInBuild > 1 && loadedCount > 1;
 
-            var nextIndex        = currentScene.buildIndex;
+            var nextIndex = currentScene.buildIndex;
             if (levelComplete)
                 nextIndex = currentScene.buildIndex + 1; // advance to next
 
