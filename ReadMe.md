@@ -40,7 +40,7 @@ Each milestone corresponds to a key section in the Rocket Boost module. You can 
 |   [ x ]   | 3. Audio & Particles        | Thruster SFX, booster particle effects, multiple audio clips.                          |
 |   [ x ]   | 4. Game State Management    | Switch statements for state, SceneManager respawn/level load, debug keys.              |
 |   [ x ]   | 5. Level Design & Obstacles | Add colliders/hazards, oscillating objects, multi-level layouts.                       |
-|   [   ]   | 6. Polish & Post-Processing | Quick game tuning, set dressing & lights, intro to post-processing, prefab management. |
+|   [ X ]   | 6. Polish & Post-Processing | Quick game tuning, set dressing & lights, intro to post-processing, prefab management. |
 |   [   ]   | 7. Build & Share            | Build PC + WebGL, publish WebGL version to Itch.io.                                    |
 
 ---
@@ -138,3 +138,67 @@ Based on your screenshot (white pod with blue glow, red sky, blue towers):
 ---
 
 This keeps everything transparent for your Itch.io page while making it look polished and professional.
+
+---
+
+## **5 level designs** (each with 4–7 moments, one unique per level):
+
+### **Level 1: Cavern Run (Intro + Unique: Very Dark)**
+
+* Fly under low ceiling
+* Fly over tall structure
+* Fly through a gap
+* **Unique:** Area goes pitch-black, obstacles barely visible except glowing tips
+* Land on moving platform
+
+---
+
+### **Level 2: Industrial Landing (Unique: Moving Landing Platform)**
+
+* Fly through piston walls
+* Fly over stacked modules
+* Time through oscillating piston corridor
+* Fly under narrow gap
+* **Unique:** Landing pad moves side-to-side
+
+---
+
+### **Level 3: Cargo Escort (Unique: Bigger Rocket)**
+
+* Start with bigger rocket (carrying cargo)
+* Fly through piston section
+* Fly over high block
+* Fly through narrow gap
+* **Unique:** Movement feels tighter because of larger rocket collider
+* Land carefully on platform
+
+---
+
+### **Level 4: Narrow Escape (Unique: Horizontal Tunnel)**
+
+* Fly under ceiling rocks
+* Fly over protruding pipes
+* **Unique:** Long narrow horizontal tunnel with pistons blocking intermittently
+* Time piston corridor exit
+* Land at far side
+
+
+
+---
+
+### **Level 5: Descent (Unique: Vertical Tunnel)**
+
+* Fly over first obstacle
+* Fly through piston section
+* **Unique:** Long vertical tunnel with protruding walls + oscillating pistons
+* Avoid narrow side gaps
+* Land at bottom platform
+
+---
+
+⚡ Next Step: I can generate **5 images** (one per level) in-engine style with blocky assets:
+
+* Gray walls/buildings
+* Glowing pistons (red/orange)
+* Landing pads (green glow)
+* Unique element highlighted (e.g., tunnel, darkness, bigger rocket)
